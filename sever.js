@@ -1,19 +1,24 @@
+/**
+ * Nhat Trang
+ * June 7th 2022
+ */
+
 // express to handle request
 const express = require("express");
-const { json } = require("express/lib/response");
 const app = express();
 
 // parse json in the body of request
 app.use(express.json());
 
+// allow for connection between different origin
 const cors = require("cors");
 const corsOptions ={
    origin:'*', 
-   credentials:true,            //access-control-allow-credentials:true
+   credentials:true,            
    optionSuccessStatus:200,
 }
 
-app.use(cors(corsOptions)) // Use this after the variable declaration
+app.use(cors(corsOptions))
 
 // privates
 require("dotenv").config();
@@ -25,6 +30,30 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID);
 // link to sheet https://docs.google.com/spreadsheets/d/1BjsH5S-8vNwJxlM5CCQiTkvXsahmkDqc_RfRlgQWM9g/edit?usp=sharing
 
+
+/**
+ * @api {get} 
+ * @apiName GetPairedValue
+ * 
+ * @apiSuccess (200: Success) {String} result: int, data: {}
+ * 
+ *  * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *      result : 200
+ *       "data": {
+ *              "key1": "value1",
+ *              "key2": "value2",
+ *              "key3": "value3",
+ *              "key4": "value4"
+ *          }
+ *     }
+ * 
+ * @apiError (500: Problem connecting to spreadsheet) {String} description: "Problem connecting to spreadsheet"
+ * 
+ * @apiError (500: Problem getting data) {String} description: "Problem getting data"
+ * 
+ */ 
 app.get("/", (request, respond, next) => {
     connectToSpreadSheet()
         .then((sheet) => {
@@ -34,7 +63,7 @@ app.get("/", (request, respond, next) => {
         .catch(err => {
             respond.status(500).send({
                 result: 500,
-                description: "problem connecting to spreadsheet"
+                description: "Problem connecting to spreadsheet"
             })
         });
 }, (request, respond) => {
@@ -52,18 +81,44 @@ app.get("/", (request, respond, next) => {
         .catch(err => {
             respond.status(500).send({
                 result: 500,
-                description: "problem getting data"
+                description: "Problem getting data"
             })
         })
 });
 
+/**
+ * @api {post} 
+ * @apiName AddUpdateValue
+ * 
+ * @apiSuccess (200: Success) {String} result: int, description: String
+ * 
+ *  * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *          result: 200,
+ *          description: "Value has been updated"
+ *      }
+ * * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *          result: 201,
+ *          description: "Paired Value added"
+ *      }
+ * 
+ * @apiError (400: Invalid input) {String} description: "Invalid input"
+ * 
+ * @apiError (500: Problem connecting to spreadsheet) {String} description: "Problem connecting to spreadsheet"
+ * 
+ * @apiError (500: Problem updating existing key) {String} description: "Problem updating existing key"
+ * 
+ * @apiError (500: Problem adding new key) {String} description: "Problem adding new key"
+ * 
+ */ 
 app.post("/data", (request, respond, next) => {
     request.body.keys = Object.keys(request.body);
     request.body.values = Object.values(request.body);
 
-    //check to see if new input pair is valid
-    console.log(request.body.keys);
-    // console.log(request.body.values);           
+    //check to see if new input pair is valid          
     if (request.body.keys.length === 1 && request.body.values.length === 2 && 
         !isEmpty(request.body.values[0]) && !isEmpty(request.body.keys[0])) {
         connectToSpreadSheet()
@@ -131,8 +186,27 @@ app.post("/data", (request, respond, next) => {
     }); 
 });
 
+/**
+ * @api {delete} 
+ * @apiName DeleteValue
+ * 
+ * @apiSuccess (200: Success) {String} result: int, description: String
+ * 
+ *  * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *          result: 200,
+ *          description: "Paired value deleted"
+ *      }
+ * 
+ * @apiError (400: can't find key) {String} description: "can't find key""
+ * 
+ * @apiError (500: Problem connecting to spreadsheet) {String} description: "Problem connecting to spreadsheet"
+ * 
+ * @apiError (500: Problem deleting key-value pair) {String} description: "PProblem deleting key-value pair"
+ * 
+ */ 
 app.delete("/data/:key", (request, respond, next) => {
-    //let key = request.params.key;
     connectToSpreadSheet()
         .then(sheet => {
         request.body.GoogleSheet = sheet;
@@ -160,7 +234,7 @@ app.delete("/data/:key", (request, respond, next) => {
                 }
             }
             if (!hasKey) {
-                respond.status(500).send({
+                respond.status(400).send({
                     result: 500,
                     description: "can't find key"
                 })
@@ -170,7 +244,7 @@ app.delete("/data/:key", (request, respond, next) => {
         .catch (err => {
             respond.status(500).send({
                 result: 500,
-                description: "Something went wrong"
+                description: "Problem deleting key-value pair"
             })
         })
 })
