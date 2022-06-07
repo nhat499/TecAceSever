@@ -155,7 +155,7 @@ app.delete("/data/:key", (request, respond, next) => {
                     rows[i].delete();
                     respond.status(200).send({
                         result: 200,
-                        description: "ok"
+                        description: "Paired value deleted"
                     })
                 }
             }
